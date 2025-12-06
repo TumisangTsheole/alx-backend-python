@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 """
-Functions to stream and process user data in batches using Python generators.
+Generator functions to stream and process user data in batches.
+Revised to strictly avoid the 'return' keyword.
 """
 import mysql.connector
 import sys
 
 # --- Configuration (Must match the settings in seed.py) ---
 MYSQL_USER = "root"
-MYSQL_PASSWORD = "your_mysql_password"  # Replace with your actual password
+MYSQL_PASSWORD = "your_mysql_password"  # <--- UPDATE THIS
 MYSQL_HOST = "localhost"
 DATABASE_NAME = "ALX_prodev"
 # ---------------------------------------------------------
@@ -33,16 +34,13 @@ def stream_users_in_batches(batch_size):
             database=DATABASE_NAME
         )
         
-        # Use dictionary=True for dict results
         cursor = connection.cursor(dictionary=True)
-        
         select_query = "SELECT user_id, name, email, age FROM user_data"
         cursor.execute(select_query)
 
         # Loop 1: Continually fetch results until no more rows are left
         while True:
             # fetchmany() fetches up to batch_size rows.
-            # This is the core mechanism for batch fetching.
             batch = cursor.fetchmany(batch_size)
             
             if not batch:
@@ -53,9 +51,11 @@ def stream_users_in_batches(batch_size):
             yield batch
             
     except mysql.connector.Error as err:
+        # On error, print message and let the function terminate implicitly.
         print(f"Database error: {err}", file=sys.stderr)
         
     except Exception as e:
+        # On error, print message and let the function terminate implicitly.
         print(f"An unexpected error occurred: {e}", file=sys.stderr)
         
     finally:
@@ -81,29 +81,20 @@ def batch_processing(batch_size):
         # Loop 3: Iterate over the individual users within the current batch
         for user in batch:
             # Filter the users
-            if user['age'] > 25:
+            if user.get('age', 0) > 25: 
                 # Yield the single processed user
                 yield user
 
 
 if __name__ == '__main__':
-    # Example usage for local testing
-    
-    # Process with a batch size of 50
     BATCH_SIZE = 50
     processed_users_generator = batch_processing(BATCH_SIZE)
     
     print(f"--- Processing users in batches of {BATCH_SIZE} (Age > 25) ---")
     
-    # We can use a for loop to consume the final generator
     count = 0
-    # Loop 4 (Outside the function, for consumption only): Iterate over the processed users
     for user in processed_users_generator:
         print(user)
         count += 1
-        # Stop after 10 users for brevity in testing
         if count >= 10:
             break
-    
-    if count == 0:
-        print("No users found or processing failed.")
